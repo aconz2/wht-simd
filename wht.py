@@ -22,7 +22,8 @@ def fwht(n):
         round_ += 1
         h *= 2
 
-fwht(32)
+# fwht(32)
+fwht(64)
 
 # round 0
 # x     =   7   6   5   4   3   2   1   0
@@ -54,6 +55,11 @@ fwht(32)
 # s =  -  -  -  -  -  -  -  - |  -  -  -  -  -  -  -  - ||  +  +  +  +  +  +  +  + |  +  +  +  +  +  +  +  +
 # y = 0f 0e 0d 0c 0b 0a 09 08 | 07 06 05 04 03 02 01 00 || 1f 1e 1d 1c 1b 1a 19 18 | 17 16 15 14 13 12 11 10
 #           1 - 3                      0 - 2                        1 + 3                    0 + 2
+
+# round 5
+# the pattern continues as in 3,4 where the add/sub is over whole lanes
+# x =   7   6   5   4   3   2   1   0
+#     3-7 2-6 1-5 0-4 3+7 2+6 1+5 0+4
 
 # == round 0 ==
 # [ 0] =  0 +  1
