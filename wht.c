@@ -122,7 +122,7 @@ void NOINLINE wht_64_simd(float* x) {
         _mm256_set_epi32(3, 2, 1, 0, 7, 6, 5, 4), // permpd with 0x4e == 0b01_01
     };
 
-    __m256 u[k], v[k];
+    __m256 u[k];
     for (int i = 0; i < k; i++) {
         u[i] = _mm256_loadu_ps(&x[i*8]);
     }
@@ -135,38 +135,22 @@ void NOINLINE wht_64_simd(float* x) {
         }
     }
 
-    // flip flop u/v back and forth
-    size_t h;
-
-    // round 3
-    h = 1;
-    for (size_t i = 0; i < k; i += h * 2) {
-        for (size_t j = i; j < i + h; j++) {
-            v[j]     = _mm256_add_ps(u[j], u[j + h]);
-            v[j + h] = _mm256_sub_ps(u[j], u[j + h]);
+    const size_t rounds = 3 + 1;
+    __m256 w[rounds][k];
+    for (size_t i = 0; i < k; i++) {
+        w[0][i] = u[i];
+    }
+    size_t r = 1;
+    for (size_t h = 1; h < k; h *= 2, r += 1) {
+        for (size_t i = 0; i < k; i += h * 2) {
+            for (size_t j = i; j < i + h; j++) {
+                w[r][j]     = _mm256_add_ps(w[r-1][j], w[r-1][j + h]);
+                w[r][j + h] = _mm256_sub_ps(w[r-1][j], w[r-1][j + h]);
+            }
         }
     }
-
-    // round 4
-    h = 2;
-    for (size_t i = 0; i < k; i += h * 2) {
-        for (size_t j = i; j < i + h; j++) {
-            u[j]     = _mm256_add_ps(v[j], v[j + h]);
-            u[j + h] = _mm256_sub_ps(v[j], v[j + h]);
-        }
-    }
-
-    // round 5
-    h = 4;
-    for (size_t i = 0; i < k; i += h * 2) {
-        for (size_t j = i; j < i + h; j++) {
-            v[j]     = _mm256_add_ps(u[j], u[j + h]);
-            v[j + h] = _mm256_sub_ps(u[j], u[j + h]);
-        }
-    }
-
     for (int i = 0; i < k; i++) {
-        _mm256_storeu_ps(&x[i*8], v[i]);
+        _mm256_storeu_ps(&x[i*8], w[rounds-1][i]);
     }
 }
 
@@ -197,47 +181,22 @@ void NOINLINE wht_128_simd(float* x) {
         }
     }
 
-    // flip flop u/v back and forth
-    size_t h;
-
-    // round 3
-    h = 1;
-    for (size_t i = 0; i < k; i += h * 2) {
-        for (size_t j = i; j < i + h; j++) {
-            v[j]     = _mm256_add_ps(u[j], u[j + h]);
-            v[j + h] = _mm256_sub_ps(u[j], u[j + h]);
+    const size_t rounds = 4 + 1;
+    __m256 w[rounds][k];
+    for (size_t i = 0; i < k; i++) {
+        w[0][i] = u[i];
+    }
+    size_t r = 1;
+    for (size_t h = 1; h < k; h *= 2, r += 1) {
+        for (size_t i = 0; i < k; i += h * 2) {
+            for (size_t j = i; j < i + h; j++) {
+                w[r][j]     = _mm256_add_ps(w[r-1][j], w[r-1][j + h]);
+                w[r][j + h] = _mm256_sub_ps(w[r-1][j], w[r-1][j + h]);
+            }
         }
     }
-
-    // round 4
-    h = 2;
-    for (size_t i = 0; i < k; i += h * 2) {
-        for (size_t j = i; j < i + h; j++) {
-            u[j]     = _mm256_add_ps(v[j], v[j + h]);
-            u[j + h] = _mm256_sub_ps(v[j], v[j + h]);
-        }
-    }
-
-    // round 5
-    h = 4;
-    for (size_t i = 0; i < k; i += h * 2) {
-        for (size_t j = i; j < i + h; j++) {
-            v[j]     = _mm256_add_ps(u[j], u[j + h]);
-            v[j + h] = _mm256_sub_ps(u[j], u[j + h]);
-        }
-    }
-
-    // round 6
-    h = 8;
-    for (size_t i = 0; i < k; i += h * 2) {
-        for (size_t j = i; j < i + h; j++) {
-            u[j]     = _mm256_add_ps(v[j], v[j + h]);
-            u[j + h] = _mm256_sub_ps(v[j], v[j + h]);
-        }
-    }
-
     for (int i = 0; i < k; i++) {
-        _mm256_storeu_ps(&x[i*8], u[i]);
+        _mm256_storeu_ps(&x[i*8], w[rounds-1][i]);
     }
 }
 
@@ -312,7 +271,7 @@ int main() {
 
 #else
 
-    size_t rounds = 10000000;
+    size_t rounds = 30000000;
     float acc;
     Timespec start, stop;
 
